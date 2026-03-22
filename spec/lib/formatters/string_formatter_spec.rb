@@ -50,9 +50,10 @@ RSpec.describe Formatter::String do
       end
 
       it "includes both basic and import tax in Sales Taxes" do
-        # basic: 4.75, import: 2.38 -> Sales Taxes: 7.13
+        # basic: ceil(475.0/5)*5=475 cents=4.75, import: ceil(237.5/5)*5=240 cents=2.40
+        # Sales Taxes: 4.75 + 2.40 = 7.15
         lines = formatter.call(items).split("\n")
-        expect(lines[-2]).to eq("Sales Taxes: 7.13")
+        expect(lines[-2]).to eq("Sales Taxes: 7.15")
       end
     end
 

@@ -85,9 +85,10 @@ RSpec.describe Item do
 
   describe "#import_tax" do
     context "when imported" do
-      it "returns 5% of unit_price" do
+      it "returns 5% of unit_price rounded up to nearest 0.05" do
         item = described_class.new(quantity: 1, imported: true, name: "bottle of perfume", unit_price: 47.50)
-        expect(item.import_tax).to eq(2.38)
+        # 4750 * 5 / 100.0 = 237.5 → ceil(237.5/5)*5 = ceil(47.5)*5 = 48*5 = 240 cents = 2.40
+        expect(item.import_tax).to eq(2.40)
       end
 
       it "is not affected by quantity" do
@@ -138,18 +139,19 @@ RSpec.describe Item do
 
     context "when imported" do
       it "includes both basic tax and import tax for a taxable item" do
-        # basic: (4750 * 10 / 100.0).round = 475 cents
-        # import: (4750 * 5 / 100.0).round = 238 cents
-        # total: (4750 + 475 + 238) * 1 / 100.0 = 54.63
+        # basic: ceil(4750*10/100.0 / 5)*5 = ceil(9.5)*5 = 10*5 = 50 → but wait:
+        # 4750 * 10 / 100.0 = 475.0 → ceil(475.0/5)*5 = ceil(95)*5 = 95*5 = 475 cents
+        # import: 4750 * 5 / 100.0 = 237.5 → ceil(237.5/5)*5 = ceil(47.5)*5 = 48*5 = 240 cents
+        # total: (4750 + 475 + 240) * 1 / 100.0 = 54.65
         item = described_class.new(quantity: 1, imported: true, name: "bottle of perfume", unit_price: 47.50)
-        expect(item.total).to eq(54.63)
+        expect(item.total).to eq(54.65)
       end
 
       it "includes only import tax for an exempt item" do
-        # no basic tax; import: (1249 * 5 / 100.0).round = 62 cents
-        # total: (1249 + 62) * 2 / 100.0 = 26.22
+        # no basic tax; import: 1249 * 5 / 100.0 = 62.45 → ceil(62.45/5)*5 = ceil(12.49)*5 = 13*5 = 65 cents
+        # total: (1249 + 65) * 2 / 100.0 = 26.28
         item = described_class.new(quantity: 2, imported: true, name: "book", unit_price: 12.49)
-        expect(item.total).to eq(26.22)
+        expect(item.total).to eq(26.28)
       end
     end
 

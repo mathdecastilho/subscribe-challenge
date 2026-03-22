@@ -23,6 +23,10 @@ class Item
   # e.g. 5 / 100.0 == 0.05  (kept as a constant for symmetry with CENTS_TO_UNIT)
   PERCENT_TO_RATE = 100.0
 
+  # The rounding granularity for tax amounts: taxes are always rounded UP to
+  # the nearest 5 cents (i.e. the nearest 0.05 of a currency unit).
+  TAX_ROUNDING_GRANULARITY_CENTS = 5
+
   # Maps each known product name (singular and plural) to its category.
   #
   # NOTE: This is not an ideal solution. Hardcoding product names here means
@@ -88,30 +92,33 @@ class Item
     (unit_price * CENTS_PER_UNIT).round
   end
 
-  # Returns the basic sales tax for one unit as an integer number of cents.
-  #
-  # The rate is applied entirely in integer arithmetic:
-  #   (price_in_cents × rate_percent) / 100
-  # Dividing once at the end is the only floating-point step, mirroring
-  # the same boundary strategy used in +cents_to_unit+.
+  # Returns the basic sales tax for one unit as an integer number of cents,
+  # rounded UP to the nearest TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
   # Returns 0 for items in exempt categories (book, food, medical).
   def basic_tax_in_cents
     return 0 if BASIC_TAX_EXEMPT_CATEGORIES.include?(category)
 
-    (unit_price_in_cents * BASIC_TAX_RATE_PERCENT / PERCENT_TO_RATE).round
+    raw = unit_price_in_cents * BASIC_TAX_RATE_PERCENT / PERCENT_TO_RATE
+    round_up_to_nearest_five_cents(raw)
   end
 
-  # Returns the import tax for one unit as an integer number of cents.
-  #
-  # The rate is applied entirely in integer arithmetic:
-  #   (price_in_cents × rate_percent) / 100
-  # Dividing once at the end is the only floating-point step, mirroring
-  # the same boundary strategy used in +cents_to_unit+.
+  # Returns the import tax for one unit as an integer number of cents,
+  # rounded UP to the nearest TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
   # Returns 0 for non-imported items.
   def import_tax_in_cents
     return 0 unless imported?
 
-    (unit_price_in_cents * IMPORT_TAX_RATE_PERCENT / PERCENT_TO_RATE).round
+    raw = unit_price_in_cents * IMPORT_TAX_RATE_PERCENT / PERCENT_TO_RATE
+    round_up_to_nearest_five_cents(raw)
+  end
+
+  # Rounds a raw (possibly fractional) cent amount UP to the nearest multiple
+  # of TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
+  #
+  # Formula: ceil(raw / granularity) * granularity
+  # Example: raw=62.45 → ceil(62.45/5)*5 = ceil(12.49)*5 = 13*5 = 65
+  def round_up_to_nearest_five_cents(raw)
+    (raw / TAX_ROUNDING_GRANULARITY_CENTS).ceil * TAX_ROUNDING_GRANULARITY_CENTS
   end
 
   # Converts an integer cent amount back to a decimal unit price.
