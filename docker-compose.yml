@@ -1,0 +1,5 @@
+services:
+  app:
+    build: .
+    # Pass the input string via the command, e.g.:
+    #   docker compose run app "hello world"
