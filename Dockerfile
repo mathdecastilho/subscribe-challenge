@@ -5,6 +5,6 @@ WORKDIR /app
 COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
-COPY sales_taxes.rb ./
+COPY app.rb ./
 
-ENTRYPOINT ["ruby", "sales_taxes.rb"]
+ENTRYPOINT ["ruby", "app.rb"]
