@@ -18,7 +18,8 @@ module Formatter
     private
 
     def format_item(item)
-      format("%d %s: %.2f", item.quantity, item.name, item.total)
+      label = item.imported? ? "imported #{item.name}" : item.name
+      format("%d %s: %.2f", item.quantity, label, item.total)
     end
 
     # Sum of all taxes (basic + import) across every unit of every item.
