@@ -88,14 +88,22 @@ docker compose run test
 
 Or with plain Docker:
 
+**Build the image:**
+
 ```sh
 docker build -t sales-taxes .
+```
 
-# run the app
+**Run the app:**
+
+```sh
 docker run --rm sales-taxes "1 music CD at 14.99
 1 imported box of chocolates at 10.00"
+```
 
-# run the tests
+**Run the tests:**
+
+```sh
 docker run --rm --entrypoint bundle sales-taxes exec rspec
 ```
 
