@@ -30,4 +30,27 @@ RSpec.describe Item do
       expect(item.imported?).to be(false)
     end
   end
+
+  describe "#total" do
+    it "returns unit_price times quantity" do
+      item = described_class.new(quantity: 2, imported: false, name: "book", unit_price: 12.49)
+      expect(item.total).to eq(24.98)
+    end
+
+    it "returns unit_price when quantity is 1" do
+      item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+      expect(item.total).to eq(14.99)
+    end
+
+    it "handles prices that are susceptible to float rounding errors" do
+      # 0.1 + 0.2 == 0.30000000000000004 in naive float arithmetic;
+      # working in integer cents prevents this class of error.
+      item = described_class.new(quantity: 3, imported: false, name: "chocolate bar", unit_price: 0.85)
+      expect(item.total).to eq(2.55)
+    end
+
+    it "returns a numeric value" do
+      expect(item.total).to be_a(Numeric)
+    end
+  end
 end
