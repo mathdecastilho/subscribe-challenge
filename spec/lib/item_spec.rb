@@ -31,6 +31,19 @@ RSpec.describe Item do
     end
   end
 
+  describe "#basic_tax" do
+    it "returns 10% of unit_price" do
+      item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+      expect(item.basic_tax).to eq(1.50)
+    end
+
+    it "is not affected by quantity" do
+      item_qty1 = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+      item_qty3 = described_class.new(quantity: 3, imported: false, name: "music CD", unit_price: 14.99)
+      expect(item_qty1.basic_tax).to eq(item_qty3.basic_tax)
+    end
+  end
+
   describe "#import_tax" do
     context "when imported" do
       it "returns 5% of unit_price" do
@@ -55,35 +68,34 @@ RSpec.describe Item do
 
   describe "#total" do
     context "when not imported" do
-      it "returns unit_price times quantity" do
+      it "includes 10% basic tax in the total" do
+        # 12.49 * 10% = 1.249 -> rounds to 125 cents = 1.25; (12.49 + 1.25) * 2 = 27.48
         item = described_class.new(quantity: 2, imported: false, name: "book", unit_price: 12.49)
-        expect(item.total).to eq(24.98)
-      end
-
-      it "returns unit_price when quantity is 1" do
-        item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
-        expect(item.total).to eq(14.99)
+        expect(item.total).to eq(27.48)
       end
 
       it "handles prices susceptible to float rounding errors" do
-        # 0.1 + 0.2 == 0.30000000000000004 in naive float arithmetic;
-        # working in integer cents prevents this class of error.
+        # 0.85 * 10% = 0.085 -> rounds to 9 cents; (0.85 + 0.09) * 3 = 2.82
         item = described_class.new(quantity: 3, imported: false, name: "chocolate bar", unit_price: 0.85)
-        expect(item.total).to eq(2.55)
+        expect(item.total).to eq(2.82)
       end
     end
 
     context "when imported" do
-      it "includes 5% import tax in the total" do
-        # 47.50 * 5% = 2.375 -> rounds to 2.38 cents; (47.50 + 2.38) * 1 = 49.88
+      it "includes both basic tax and import tax in the total" do
+        # basic: (4750 * 10 / 100.0).round = 475 cents
+        # import: (4750 * 5 / 100.0).round = 238 cents
+        # total: (4750 + 475 + 238) * 1 / 100.0 = 54.63
         item = described_class.new(quantity: 1, imported: true, name: "bottle of perfume", unit_price: 47.50)
-        expect(item.total).to eq(49.88)
+        expect(item.total).to eq(54.63)
       end
 
-      it "applies import tax per unit then multiplies by quantity" do
-        # 12.49 * 5% = 0.6245 -> rounds to 62 cents = 0.62; (12.49 + 0.62) * 2 = 26.22
+      it "applies both taxes per unit then multiplies by quantity" do
+        # basic: (1249 * 10 / 100.0).round = 125 cents
+        # import: (1249 * 5 / 100.0).round = 62 cents
+        # total: (1249 + 125 + 62) * 2 / 100.0 = 28.72
         item = described_class.new(quantity: 2, imported: true, name: "book", unit_price: 12.49)
-        expect(item.total).to eq(26.22)
+        expect(item.total).to eq(28.72)
       end
     end
 
