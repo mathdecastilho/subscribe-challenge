@@ -6,5 +6,6 @@ COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
 COPY app.rb ./
+COPY lib/ ./lib/
 
 ENTRYPOINT ["ruby", "app.rb"]
