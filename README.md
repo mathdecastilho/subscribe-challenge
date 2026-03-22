@@ -71,19 +71,32 @@ bundle exec rspec
 
 ## Running with Docker
 
-Build and run with `docker compose`:
+Two services are defined in `docker-compose.yml`: `app` runs the CLI, `test` runs the suite.
+
+**Run the app** — pass the basket as the argument to the `app` service:
 
 ```sh
 docker compose run app "1 music CD at 14.99
 1 imported box of chocolates at 10.00"
 ```
 
-Or build and run with plain Docker:
+**Run the tests** — use the `test` service (no argument needed):
+
+```sh
+docker compose run test
+```
+
+Or with plain Docker:
 
 ```sh
 docker build -t sales-taxes .
+
+# run the app
 docker run --rm sales-taxes "1 music CD at 14.99
 1 imported box of chocolates at 10.00"
+
+# run the tests
+docker run --rm --entrypoint bundle sales-taxes exec rspec
 ```
 
 ## Acceptance tests

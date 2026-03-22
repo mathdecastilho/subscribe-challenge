@@ -1,5 +1,11 @@
 services:
   app:
     build: .
-    # Pass the input string via the command, e.g.:
-    #   docker compose run app "hello world"
+    # Runs the CLI. Pass the basket as the argument:
+    #   docker compose run app "1 music CD at 14.99"
+
+  test:
+    build: .
+    entrypoint: bundle exec rspec
+    # Runs the full test suite:
+    #   docker compose run test
