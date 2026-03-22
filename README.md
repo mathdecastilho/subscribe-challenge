@@ -11,9 +11,13 @@ A Ruby CLI application that parses a shopping basket, applies sales tax rules, a
 ## Project structure
 
 ```
-app.rb                        # Entry point — wires parser and formatter together
+app.rb                        # Entry point — parses input, calculates taxes, formats receipt
 lib/
-  item.rb                     # Item value object; holds tax and total calculations
+  item.rb                     # Item value object (quantity, name, unit_price, category, imported?)
+  taxes/
+    basic_tax.rb              # Chain handler — 10% basic sales tax (exempt: book, food, medical)
+    import_tax.rb             # Chain handler — 5% import duty (imported items only)
+    taxes.rb                  # Orchestrator — builds the handler chain, exposes totals
   parsers/
     parser.rb                 # Parser::Base (abstract interface)
     string_parser.rb          # Parser::String — parses a multi-line input string
@@ -24,6 +28,10 @@ spec/
   app_spec.rb                 # Acceptance tests (the three sample inputs/outputs)
   lib/
     item_spec.rb
+    taxes/
+      basic_tax_spec.rb
+      import_tax_spec.rb
+      taxes_spec.rb
     parsers/
       parser_spec.rb
       string_parser_spec.rb
