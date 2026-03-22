@@ -23,12 +23,27 @@ module Formatter
     end
 
     # Sum of all taxes (basic + import) across every unit of every item.
+    #
+    # Accumulates in integer cents to prevent IEEE 754 drift across many items,
+    # then converts once at the display boundary.
     def total_taxes(items)
-      items.sum { |item| (item.basic_tax + item.import_tax) * item.quantity }
+      total_cents = items.sum { |item| (tax_in_cents(item)) * item.quantity }
+      total_cents / 100.0
     end
 
     def grand_total(items)
-      items.sum(&:total)
+      total_cents = items.sum { |item| total_in_cents(item) }
+      total_cents / 100.0
+    end
+
+    # Returns the combined per-unit tax for one item in integer cents.
+    def tax_in_cents(item)
+      (item.basic_tax * 100).round + (item.import_tax * 100).round
+    end
+
+    # Returns the total price for one item line in integer cents.
+    def total_in_cents(item)
+      (item.total * 100).round
     end
   end
 end
