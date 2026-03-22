@@ -31,6 +31,26 @@ RSpec.describe Item do
     end
   end
 
+  describe "#category" do
+    {
+      "book"                      => :book,
+      "books"                     => :book,
+      "box of chocolates"         => :food,
+      "boxes of chocolates"       => :food,
+      "chocolate bar"             => :food,
+      "chocolate bars"            => :food,
+      "packet of headache pills"  => :medical,
+      "packets of headache pills" => :medical,
+      "music CD"                  => :other,
+      "bottle of perfume"         => :other
+    }.each do |product_name, expected_category|
+      it "categorises '#{product_name}' as :#{expected_category}" do
+        item = described_class.new(quantity: 1, imported: false, name: product_name, unit_price: 1.00)
+        expect(item.category).to eq(expected_category)
+      end
+    end
+  end
+
   describe "#basic_tax" do
     it "returns 10% of unit_price" do
       item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
