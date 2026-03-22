@@ -86,22 +86,12 @@ docker run --rm sales-taxes "1 music CD at 14.99
 1 imported box of chocolates at 10.00"
 ```
 
-## Sample output
+## Acceptance tests
 
-Input:
-```
-1 imported bottle of perfume at 27.99
-1 bottle of perfume at 18.99
-1 packet of headache pills at 9.75
-3 imported boxes of chocolates at 11.25
-```
+The three canonical input/output examples from the problem statement are encoded as acceptance tests in [`spec/app_spec.rb`](spec/app_spec.rb). They cover the main scenarios:
 
-Output:
-```
-1 imported bottle of perfume: 32.19
-1 bottle of perfume: 20.89
-1 packet of headache pills: 9.75
-3 imported boxes of chocolates: 35.55
-Sales Taxes: 7.90
-Total: 98.38
-```
+- **Input 1** — domestic items spanning exempt (book, food) and taxable (other) categories.
+- **Input 2** — imported items only, combining an exempt and a taxable product.
+- **Input 3** — a mix of imported and domestic items across all three exempt categories and the taxable category.
+
+Each test asserts the full receipt string including per-item totals, `Sales Taxes`, and `Total`. They are the canonical reference for correct behaviour and the first place to look when changing tax or formatting logic.
