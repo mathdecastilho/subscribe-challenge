@@ -5,7 +5,7 @@ RSpec.describe Formatter::Base do
 
   describe "#call" do
     it "raises NotImplementedError" do
-      expect { formatter.call([]) }.to raise_error(NotImplementedError)
+      expect { formatter.call([], nil) }.to raise_error(NotImplementedError)
     end
   end
 end
