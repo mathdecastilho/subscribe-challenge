@@ -106,8 +106,132 @@ RSpec.describe Item do
     end
   end
 
-  describe "#total" do
+  describe "#basic_tax_in_cents" do
+    it "returns an Integer" do
+      item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+      expect(item.basic_tax_in_cents).to be_a(Integer)
+    end
+
+    context "when category is :other" do
+      it "returns 10% of unit_price rounded up to nearest 5 cents" do
+        # 1499 * 10 / 100.0 = 149.9 → ceil(149.9/5)*5 = ceil(29.98)*5 = 30*5 = 150
+        item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+        expect(item.basic_tax_in_cents).to eq(150)
+      end
+
+      it "is not affected by quantity" do
+        item_qty1 = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+        item_qty3 = described_class.new(quantity: 3, imported: false, name: "music CD", unit_price: 14.99)
+        expect(item_qty1.basic_tax_in_cents).to eq(item_qty3.basic_tax_in_cents)
+      end
+    end
+
+    context "when category is exempt" do
+      it "returns 0 for a book" do
+        item = described_class.new(quantity: 1, imported: false, name: "book", unit_price: 12.49)
+        expect(item.basic_tax_in_cents).to eq(0)
+      end
+
+      it "returns 0 for a food item" do
+        item = described_class.new(quantity: 1, imported: false, name: "chocolate bar", unit_price: 0.85)
+        expect(item.basic_tax_in_cents).to eq(0)
+      end
+
+      it "returns 0 for a medical item" do
+        item = described_class.new(quantity: 1, imported: false, name: "packet of headache pills", unit_price: 9.75)
+        expect(item.basic_tax_in_cents).to eq(0)
+      end
+    end
+  end
+
+  describe "#import_tax_in_cents" do
+    it "returns an Integer" do
+      item = described_class.new(quantity: 1, imported: true, name: "book", unit_price: 12.49)
+      expect(item.import_tax_in_cents).to be_a(Integer)
+    end
+
+    context "when imported" do
+      it "returns 5% of unit_price rounded up to nearest 5 cents" do
+        # 4750 * 5 / 100.0 = 237.5 → ceil(237.5/5)*5 = ceil(47.5)*5 = 48*5 = 240
+        item = described_class.new(quantity: 1, imported: true, name: "bottle of perfume", unit_price: 47.50)
+        expect(item.import_tax_in_cents).to eq(240)
+      end
+
+      it "rounds a fractional result up to the nearest 5 cents" do
+        # 1249 * 5 / 100.0 = 62.45 → ceil(62.45/5)*5 = ceil(12.49)*5 = 13*5 = 65
+        item = described_class.new(quantity: 1, imported: true, name: "book", unit_price: 12.49)
+        expect(item.import_tax_in_cents).to eq(65)
+      end
+
+      it "is not affected by quantity" do
+        item_qty1 = described_class.new(quantity: 1, imported: true, name: "book", unit_price: 12.49)
+        item_qty3 = described_class.new(quantity: 3, imported: true, name: "book", unit_price: 12.49)
+        expect(item_qty1.import_tax_in_cents).to eq(item_qty3.import_tax_in_cents)
+      end
+    end
+
     context "when not imported" do
+      it "returns 0" do
+        item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+        expect(item.import_tax_in_cents).to eq(0)
+      end
+    end
+  end
+
+  describe "#tax_in_cents" do
+    it "returns an Integer" do
+      item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+      expect(item.tax_in_cents).to be_a(Integer)
+    end
+
+    it "equals basic_tax_in_cents + import_tax_in_cents" do
+      item = described_class.new(quantity: 1, imported: true, name: "bottle of perfume", unit_price: 47.50)
+      expect(item.tax_in_cents).to eq(item.basic_tax_in_cents + item.import_tax_in_cents)
+    end
+
+    it "is not affected by quantity" do
+      item_qty1 = described_class.new(quantity: 1, imported: true, name: "bottle of perfume", unit_price: 47.50)
+      item_qty3 = described_class.new(quantity: 3, imported: true, name: "bottle of perfume", unit_price: 47.50)
+      expect(item_qty1.tax_in_cents).to eq(item_qty3.tax_in_cents)
+    end
+
+    it "returns only import tax for an exempt imported item" do
+      # book: basic=0, import=65
+      item = described_class.new(quantity: 1, imported: true, name: "book", unit_price: 12.49)
+      expect(item.tax_in_cents).to eq(65)
+    end
+
+    it "returns 0 for a domestic exempt item" do
+      item = described_class.new(quantity: 1, imported: false, name: "chocolate bar", unit_price: 0.85)
+      expect(item.tax_in_cents).to eq(0)
+    end
+  end
+
+  describe "#total_in_cents" do
+    it "returns an Integer" do
+      item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+      expect(item.total_in_cents).to be_a(Integer)
+    end
+
+    it "equals total * 100 for a domestic taxable item" do
+      # (1499 + 150) * 1 = 1649
+      item = described_class.new(quantity: 1, imported: false, name: "music CD", unit_price: 14.99)
+      expect(item.total_in_cents).to eq(1649)
+    end
+
+    it "scales with quantity" do
+      # (1249 + 0 + 65) * 2 = 2628
+      item = described_class.new(quantity: 2, imported: true, name: "book", unit_price: 12.49)
+      expect(item.total_in_cents).to eq(2628)
+    end
+
+    it "is consistent with #total (total == total_in_cents / 100.0)" do
+      item = described_class.new(quantity: 3, imported: true, name: "bottle of perfume", unit_price: 47.50)
+      expect(item.total_in_cents / 100.0).to eq(item.total)
+    end
+  end
+
+  describe "#total" do    context "when not imported" do
       context "with a taxable item (:other category)" do
         it "includes 10% basic tax in the total" do
           # 14.99 * 10% = 1.499 -> rounds to 150 cents = 1.50; (14.99 + 1.50) * 1 = 16.49

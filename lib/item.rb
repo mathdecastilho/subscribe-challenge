@@ -63,10 +63,9 @@ class Item
   # Returns the total price for this item (unit_price × quantity),
   # including basic sales tax and import tax when applicable.
   #
-  # All arithmetic is performed in integer cents to prevent floating-point
-  # rounding errors. See +unit_price_in_cents+ and +cents_to_unit+ for details.
+  # Delegates to +total_in_cents+ so the integer arithmetic lives in one place.
   def total
-    cents_to_unit((unit_price_in_cents + basic_tax_in_cents + import_tax_in_cents) * quantity)
+    cents_to_unit(total_in_cents)
   end
 
   # Returns the basic sales tax per unit (10% of unit_price).
@@ -77,6 +76,38 @@ class Item
   # Returns the import tax per unit, or 0.0 when the item is not imported.
   def import_tax
     cents_to_unit(import_tax_in_cents)
+  end
+
+  # Returns the combined per-unit tax (basic + import) in integer cents.
+  # Useful for callers that need to accumulate taxes without floating-point drift.
+  def tax_in_cents
+    basic_tax_in_cents + import_tax_in_cents
+  end
+
+  # Returns the total price for this line (all units, all taxes) in integer cents.
+  # Useful for callers that need to accumulate totals without floating-point drift.
+  def total_in_cents
+    (unit_price_in_cents + basic_tax_in_cents + import_tax_in_cents) * quantity
+  end
+
+  # Returns the basic sales tax for one unit in integer cents,
+  # rounded UP to the nearest TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
+  # Returns 0 for items in exempt categories (book, food, medical).
+  def basic_tax_in_cents
+    return 0 if BASIC_TAX_EXEMPT_CATEGORIES.include?(category)
+
+    raw = unit_price_in_cents * BASIC_TAX_RATE_PERCENT / PERCENT_TO_RATE
+    round_up_to_nearest_five_cents(raw)
+  end
+
+  # Returns the import tax for one unit in integer cents,
+  # rounded UP to the nearest TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
+  # Returns 0 for non-imported items.
+  def import_tax_in_cents
+    return 0 unless imported?
+
+    raw = unit_price_in_cents * IMPORT_TAX_RATE_PERCENT / PERCENT_TO_RATE
+    round_up_to_nearest_five_cents(raw)
   end
 
   private
@@ -90,26 +121,6 @@ class Item
   # arithmetic is done.
   def unit_price_in_cents
     (unit_price * CENTS_PER_UNIT).round
-  end
-
-  # Returns the basic sales tax for one unit as an integer number of cents,
-  # rounded UP to the nearest TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
-  # Returns 0 for items in exempt categories (book, food, medical).
-  def basic_tax_in_cents
-    return 0 if BASIC_TAX_EXEMPT_CATEGORIES.include?(category)
-
-    raw = unit_price_in_cents * BASIC_TAX_RATE_PERCENT / PERCENT_TO_RATE
-    round_up_to_nearest_five_cents(raw)
-  end
-
-  # Returns the import tax for one unit as an integer number of cents,
-  # rounded UP to the nearest TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
-  # Returns 0 for non-imported items.
-  def import_tax_in_cents
-    return 0 unless imported?
-
-    raw = unit_price_in_cents * IMPORT_TAX_RATE_PERCENT / PERCENT_TO_RATE
-    round_up_to_nearest_five_cents(raw)
   end
 
   # Rounds a raw (possibly fractional) cent amount UP to the nearest multiple
