@@ -1,40 +1,12 @@
 class Item
-  # Multiplier used to convert a decimal unit price to integer cents.
-  CENTS_PER_UNIT = 100
-
-  # Divisor used to convert integer cents back to a decimal unit price.
-  # Kept as a Float so the result of division is always a Float.
-  CENTS_TO_UNIT = 100.0
-
-  # Basic sales tax rate applied to all items (10%).
-  # Stored as an integer percentage to keep all tax arithmetic in integers
-  # and avoid introducing a float at the point of rate definition.
-  BASIC_TAX_RATE_PERCENT = 10
-
-  # Categories exempt from basic sales tax.
-  BASIC_TAX_EXEMPT_CATEGORIES = %i[book food medical].freeze
-
-  # Import duty rate applied to imported items (5%).
-  # Stored as an integer percentage to keep all tax arithmetic in integers
-  # and avoid introducing a float at the point of rate definition.
-  IMPORT_TAX_RATE_PERCENT = 5
-
-  # Divisor that converts an integer percentage to a fractional multiplier.
-  # e.g. 5 / 100.0 == 0.05  (kept as a constant for symmetry with CENTS_TO_UNIT)
-  PERCENT_TO_RATE = 100.0
-
-  # The rounding granularity for tax amounts: taxes are always rounded UP to
-  # the nearest 5 cents (i.e. the nearest 0.05 of a currency unit).
-  TAX_ROUNDING_GRANULARITY_CENTS = 5
-
-  # Maps each known product name (singular and plural) to its category.
+  # Maps each known product name (singular and plural) to its tax category.
   #
   # NOTE: This is not an ideal solution. Hardcoding product names here means
   # every new product must be manually added to this list, and matching by name
-  # fragment is brittle — a product like "chocolate perfume" would be
-  # misclassified because its name contains a word that belongs to a different
-  # category. A proper solution would store the category as explicit data on the
-  # product (e.g. a database column or a dedicated field in the input format).
+  # is brittle — a product like "chocolate perfume" would be misclassified
+  # because its name contains a word that belongs to a different category.
+  # A proper solution would store the category as explicit data on the product
+  # (e.g. a database column or a dedicated field in the input format).
   CATEGORIES = {
     "book"                        => :book,
     "books"                       => :book,
@@ -58,86 +30,5 @@ class Item
 
   def imported?
     @imported
-  end
-
-  # Returns the total price for this item (unit_price × quantity),
-  # including basic sales tax and import tax when applicable.
-  #
-  # Delegates to +total_in_cents+ so the integer arithmetic lives in one place.
-  def total
-    cents_to_unit(total_in_cents)
-  end
-
-  # Returns the basic sales tax per unit (10% of unit_price).
-  def basic_tax
-    cents_to_unit(basic_tax_in_cents)
-  end
-
-  # Returns the import tax per unit, or 0.0 when the item is not imported.
-  def import_tax
-    cents_to_unit(import_tax_in_cents)
-  end
-
-  # Returns the combined per-unit tax (basic + import) in integer cents.
-  # Useful for callers that need to accumulate taxes without floating-point drift.
-  def tax_in_cents
-    basic_tax_in_cents + import_tax_in_cents
-  end
-
-  # Returns the total price for this line (all units, all taxes) in integer cents.
-  # Useful for callers that need to accumulate totals without floating-point drift.
-  def total_in_cents
-    (unit_price_in_cents + basic_tax_in_cents + import_tax_in_cents) * quantity
-  end
-
-  # Returns the basic sales tax for one unit in integer cents,
-  # rounded UP to the nearest TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
-  # Returns 0 for items in exempt categories (book, food, medical).
-  def basic_tax_in_cents
-    return 0 if BASIC_TAX_EXEMPT_CATEGORIES.include?(category)
-
-    raw = unit_price_in_cents * BASIC_TAX_RATE_PERCENT / PERCENT_TO_RATE
-    round_up_to_nearest_five_cents(raw)
-  end
-
-  # Returns the import tax for one unit in integer cents,
-  # rounded UP to the nearest TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
-  # Returns 0 for non-imported items.
-  def import_tax_in_cents
-    return 0 unless imported?
-
-    raw = unit_price_in_cents * IMPORT_TAX_RATE_PERCENT / PERCENT_TO_RATE
-    round_up_to_nearest_five_cents(raw)
-  end
-
-  private
-
-  # Converts unit_price to an integer number of cents.
-  #
-  # Floating-point numbers (IEEE 754) cannot represent most decimal fractions
-  # exactly — e.g. 0.1 + 0.2 evaluates to 0.30000000000000004, not 0.3.
-  # Multiplying by 100 and rounding to the nearest integer eliminates any
-  # representation error present in the incoming float before any further
-  # arithmetic is done.
-  def unit_price_in_cents
-    (unit_price * CENTS_PER_UNIT).round
-  end
-
-  # Rounds a raw (possibly fractional) cent amount UP to the nearest multiple
-  # of TAX_ROUNDING_GRANULARITY_CENTS (5 cents).
-  #
-  # Formula: ceil(raw / granularity) * granularity
-  # Example: raw=62.45 → ceil(62.45/5)*5 = ceil(12.49)*5 = 13*5 = 65
-  def round_up_to_nearest_five_cents(raw)
-    (raw / TAX_ROUNDING_GRANULARITY_CENTS).ceil * TAX_ROUNDING_GRANULARITY_CENTS
-  end
-
-  # Converts an integer cent amount back to a decimal unit price.
-  #
-  # This is the only floating-point operation in the calculation chain and only
-  # happens at the final display boundary, so rounding errors have no chance to
-  # accumulate across multiple operations.
-  def cents_to_unit(cents)
-    cents / CENTS_TO_UNIT
   end
 end
