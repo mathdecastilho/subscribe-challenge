@@ -11,6 +11,9 @@ class Item
   # and avoid introducing a float at the point of rate definition.
   BASIC_TAX_RATE_PERCENT = 10
 
+  # Categories exempt from basic sales tax.
+  BASIC_TAX_EXEMPT_CATEGORIES = %i[book food medical].freeze
+
   # Import duty rate applied to imported items (5%).
   # Stored as an integer percentage to keep all tax arithmetic in integers
   # and avoid introducing a float at the point of rate definition.
@@ -91,7 +94,10 @@ class Item
   #   (price_in_cents × rate_percent) / 100
   # Dividing once at the end is the only floating-point step, mirroring
   # the same boundary strategy used in +cents_to_unit+.
+  # Returns 0 for items in exempt categories (book, food, medical).
   def basic_tax_in_cents
+    return 0 if BASIC_TAX_EXEMPT_CATEGORIES.include?(category)
+
     (unit_price_in_cents * BASIC_TAX_RATE_PERCENT / PERCENT_TO_RATE).round
   end
 
