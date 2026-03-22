@@ -9,6 +9,9 @@ require_relative "import_tax"
 # to the next handler in the chain. Taxes is the single entry point — callers
 # never need to know which individual rules exist.
 #
+# To add a new tax rule, append its class to HANDLER_CLASSES. The chain is built
+# automatically in that order at construction time.
+#
 # Usage:
 #   taxes = Taxes.new(items)
 #   taxes.total          # => 98.38  (grand total, all items, all taxes)
@@ -16,13 +19,20 @@ require_relative "import_tax"
 #   taxes.total_for(item)       # => 32.19  (total for one line)
 #   taxes.tax_in_cents_for(item) # => 420   (combined tax per unit, in cents)
 class Taxes
-  CENTS_TO_UNIT = 100.0
+  CENTS_TO_UNIT   = 100.0
+  HANDLER_CLASSES = [
+    BasicTax,
+    ImportTax,
+  ].freeze
 
-  # Builds the handler chain once at construction time.
-  # The chain is:  BasicTax → ImportTax  (outermost to innermost)
+  # Builds the handler chain dynamically from HANDLER_CLASSES.
+  # Handlers are folded right-to-left so the first class in the array is the
+  # outermost handler (first to be called).
   def initialize(items)
-    @items   = items
-    @chain   = BasicTax.new(next_handler: ImportTax.new)
+    @items = items
+    @chain = HANDLER_CLASSES.reverse.reduce(nil) do |next_handler, klass|
+      klass.new(next_handler: next_handler)
+    end
   end
 
   # Combined per-unit tax in integer cents for +item+ (basic + import).
